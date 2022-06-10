@@ -85,7 +85,8 @@
 
 <script>
     var filepath = "";
-    var res_columns = ""
+    var res_columns = "";
+    var target_candidates = "";
     const renderSelection= ()=>{
         $(".file-selector").select2({
             placeholder: "Select a file",
@@ -119,11 +120,7 @@
         fetch("/existingFiles" , requestOptions)
         .then(response => response.text())
         .then(result=>{
-            console.log(":reivnreinreiv")
             res = JSON.parse(result)
-            // console.log(res)
-            
-            // console.log(res['files_list'])
 
             var _div  = document.getElementById('file_list')
             var sel = document.createElement('select'); //select type of element
@@ -138,12 +135,11 @@
             opt.innerHTML = "Please select a file"
             sel.appendChild(opt)
             _div.appendChild(sel)
-            console.log(res.length)
+
             for(var i = 0 ; i < res.length ; i++){
                 var opt = document.createElement("option")
                 opt.setAttribute("value" ,res[i])
-                console.log(res[i]);
-                // res[i] += ''
+                // console.log(res[i]);
                 opt.innerHTML = res[i].split("userData\\")[1]
                 sel.appendChild(opt)
             }
@@ -207,14 +203,14 @@
             .then(response => response.json())
             .then(result => {
                 // df_res_before_processing = JSON.parse(result.toString().replace(null, "null"));
-                console.log(result)
+                // console.log(result)
                 df_res_before_processing = JSON.parse(result);
-                console.log(df_res_before_processing)
+                // console.log(df_res_before_processing)
                 //result.replace(/\bNaN\b/g, "null")
-                console.log(df_res_before_processing)
+                // console.log(df_res_before_processing)
                 generate_table_output(df_res_before_processing)
-                render_feature_selection()
-
+                // render_feature_selection()
+                fetch_target_columns() //inside this call render_feature_selection()
             })
             .catch(error => console.log('error', error));
     }
@@ -229,7 +225,7 @@
     function generate_table_output(res){
         // creates a table from values present in "res" and displays it
 
-        console.log("generateetient")
+        // console.log("generateetient")
         const columns = []
         for(var col in res[0]){
             columns.push(col)
@@ -273,7 +269,7 @@
         var prev_btn = document.getElementById("filtering_btn")
         if(prev_btn) prev_btn.remove()
         
-        console.log("feature selection")
+        // console.log("feature selection")
         var _div = document.getElementById("feature_selector")
         _div.style.display = "block"
 
@@ -353,6 +349,7 @@
         btn.innerHTML = "Apply"
         
         // for selecting the target label
+        // fetch_target_columns(_div)
         render_target_selection(_div)
         // method_k_form.appendChild(btn)
         // _div.appendChild(method_k_form)
@@ -360,7 +357,37 @@
 
 
     }
+    function fetch_target_columns(_div){
+        // Stores the possible target columns
+        console.log("fectching_target")
+        var myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+        var raw = JSON.stringify({
+            // in API parameter the name should be same
+            "filepath": filepath
+        });
+
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+        fetch("/target_columns" , requestOptions)
+        .then(response=>response.text())
+        .then(result => {
+            result = JSON.parse(result)
+            console.log("Target COLumns")
+            target_candidates = result["target-columns"]
+            console.log(target_candidates)
+            render_feature_selection()
+            // render_target_selection(_div)
+
+        })
+    }
     function render_target_selection(_div){
+        // console.log("hvirhevieriveirnvin")
+        // console.log("target " , target_candidates)
         var prev_lab = document.getElementById("target_val_lab")
         if(prev_lab) prev_lab.remove()
 
@@ -387,37 +414,14 @@
         opt.innerHTML = "Choose a target"
         sel.appendChild(opt)
         _div.appendChild(sel)
-        console.log(res.length)
-        for(var i = 0 ; i < res_columns.length ; i++){
+        // console.log(res.length)
+        for(var i = 0 ; i < target_candidates.length ; i++){
             var opt = document.createElement("option")
-            opt.setAttribute("value" ,res_columns[i])
-            console.log(res_columns[i]);
-            opt.innerHTML = res_columns[i]
+            opt.setAttribute("value" ,target_candidates[i])
+            console.log(target_candidates[i]);
+            opt.innerHTML = target_candidates[i]
             sel.appendChild(opt)
         }
-
-
-        // API to get valid target columns
-        var myHeaders = new Headers();
-        myHeaders.append("Content-Type", "application/json");
-        var raw = JSON.stringify({
-            // in API parameter the name should be same
-            "filepath": filepath
-        });
-
-        var requestOptions = {
-            method: 'POST',
-            headers: myHeaders,
-            body: raw,
-            redirect: 'follow'
-        };
-        fetch("/target_columns" , requestOptions)
-        .then(response=>response.text())
-        .then(result => {
-            result = JSON.parse(result)
-            console.log("Target COLumns")
-            console.log(result)
-        })
 
     }
     function set_file_path(){
