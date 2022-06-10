@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.8/js/select2.min.js" defer></script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <!-- <script src = "https://cdn.plot.ly/plotly-2.12.1.min.js'"></script> -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <style>
+        #feature_selector {
+            display: block;
+            padding: 10px;
+            margin-top: 100px;
+            border-color: red;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div style ="margin-top: 100px;">
+        <div class="container col-xs-3">
+            <div class="sidenav">
+                <div class="container col-xs-15">
+                    <h4>Select or upload the file</h4>
+                    <!-- For choosing file uploading or selecting option -->
+                    <form>
+                        <div class="form-group" id="file_upload_select">
+                            <label class="radio-inline">
+                                <input type="radio" name="file" onclick="render_file_uploader()" value="upload" checked>
+                                Upload a file
+                            </label>
+                            <label class="radio-inline">
+                                <input type="radio" name="file" onclick="render_file_selector()" value="upload" >
+                                Choose an existing file
+                            </label>
+                        </div>
+                    </form>
+                    <!-- File Upload by default -->
+                    <div id="file_upload" style="display: block;">
+                        <h4>Upload a file</h4>
+                        <form class = "form-inline" style="display: inline;" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <input type="file" name="file_name" id="file_name" accept=".csv" required>
+                            </div>
+                            <div class="form-group" style="margin-right: auto;">
+                                <button class="btn btn-success" id="upload-btn" type="button" value="upload"  onclick="read_csv_data()">
+                                Upload
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- File Selector(we will hide it by default) -->
+                    <div id="file_list" style="display: none;">
+                        <h4>Select a file</h4>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="container  col-xs-6" style="margin-left: 100px">
+            <p id="df_before_processing" style="margin-top:20px; margin-bottom:20px;"></p>
+            <table class = "table table-striped" border = 1 id ="df_before_processing_table"></table>
+            <div id = "feature_selector">
+                <h2>Select Feature Filtering Method</h2>
+            </div>
+            <div id = "plot_container" style="display: none; margin-top: 100px;">
+                <h2>PLOT</h2>
+                <div id = "plot_div">
+
+                </div>
+            </div>
+            <div id = "kbest_features_container" style="display: none;">
+                <h2>K Best Features</h2>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+
+<script>
+    var filepath = "";
+    var res_columns = ""
+    const renderSelection= ()=>{
+        $(".file-selector").select2({
+            placeholder: "Select a file",
+            allowClear : true
+        });
+    }
+    function render_file_uploader(){
+        var upload_file = document.getElementById('file_upload')
+        upload_file.style.display = "block";
+        var select_file = document.getElementById('file_list')
+        select_file.style.display = "none"; //we need to remove the file selector in order to load file uploader
+        //
+    }
+    function render_file_selector(){
+        console.log("HI selector")
+        var uploadFile = document.getElementById('file_upload')
+        uploadFile.style.display = "none"
+        var select_file = document.getElementById('file_list')
+        select_file.style.display = "block"
+
+        //so that we can stop regeneration of the same element multiple times on click
+        var file_selector = document.getElementById("file-selector")
+        if(file_selector) file_selector.remove()
+        var btn_selector = document.getElementById("selector_btn")
+        if(btn_selector) btn_selector.remove();
+
+        var requestOptions = {
+            method:"GET",
+            redirect:"follow"
+        }
+        fetch("/existingFiles" , requestOptions)
+        .then(response => response.text())
+        .then(result=>{
+            console.log(":reivnreinreiv")
+            res = JSON.parse(result)
+            // console.log(res)
+            
+            // console.log(res['files_list'])
+
+            var _div  = document.getElementById('file_list')
+            var sel = document.createElement('select'); //select type of element
+            sel.setAttribute("class" , "file-selector")
+            sel.setAttribute("id" , "file-selector")
+            sel.setAttribute("style" , "width:200px;height:30px")
+            // sel.setAttribute("placeholder" ,"Please select a file")
+            var opt = document.createElement("option")
+            opt.setAttribute("value","")
+            opt.setAttribute("disabled","disabled")
+            opt.setAttribute("selected","selected")
+            opt.innerHTML = "Please select a file"
+            sel.appendChild(opt)
+            _div.appendChild(sel)
+            console.log(res.length)
+            for(var i = 0 ; i < res.length ; i++){
+                var opt = document.createElement("option")
+                opt.setAttribute("value" ,res[i])
+                console.log(res[i]);
+                // res[i] += ''
+                opt.innerHTML = res[i].split("userData\\")[1]
+                sel.appendChild(opt)
+            }
+
+            var btn = document.createElement("button")
+            btn.setAttribute("onclick" , "set_file_path()") 
+            btn.setAttribute("class" , "btn btn-success")
+            btn.setAttribute("id" , "selector_btn")
+            btn.setAttribute("style" , "margin-left: 50px;")
+            btn.innerHTML = "Select"
+            _div.appendChild(btn);
+        })
+        .catch(error=>console.log('error' , error));
+
+
+        // renderSelection();
+    };
+    function read_csv_data(){
+        // Stores the file attached to a remote location and copies its URL, and then displays its content by calling a method
+        var input = document.querySelector('input[type="file"]')
+        var input_files_list = input.files
+        if(input_files_list.length == 0){
+            console.log("Please select a file")
+            return null;
+        }
+        file = input_files_list[0]
+        var formData = new FormData()
+        var endPoint = "/store_file"
+        formData.append('file', file, file.name)
+
+        var requestOptions = {
+          method:"POST",
+          body: formData,
+          redirect: 'follow',          
+        };
+        fetch(endPoint , requestOptions)
+        .then(response=>response.text())
+        .then(result=>{
+            result = JSON.parse(result)
+            filepath = result['file_url']
+            res_columns = result['columns']
+            step_selector()
+        })
+        .catch(error=>console.log('error' , error));
+
+    }
+    function step_selector(){
+        // Fetches and displays the content of the input file
+        var myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+        var raw = JSON.stringify({
+            "filepath": filepath
+        });
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+        fetch(`/df_before_processing`, requestOptions)
+            .then(response => response.json())
+            .then(result => {
+                // df_res_before_processing = JSON.parse(result.toString().replace(null, "null"));
+                console.log(result)
+                df_res_before_processing = JSON.parse(result);
+                console.log(df_res_before_processing)
+                //result.replace(/\bNaN\b/g, "null")
+                console.log(df_res_before_processing)
+                generate_table_output(df_res_before_processing)
+                render_feature_selection()
+
+            })
+            .catch(error => console.log('error', error));
+    }
+    function remove_children_nodes(element_id){
+        // Deletes all the child nodes from element with id:element_id
+        var _element = document.getElementById(element_id)
+        if(_element === null) return null;
+        while(_element.hasChildNodes()) {
+            _element.removeChild(_element.children[0])
+        }
+    }
+    function generate_table_output(res){
+        // creates a table from values present in "res" and displays it
+
+        console.log("generateetient")
+        const columns = []
+        for(var col in res[0]){
+            columns.push(col)
+        }
+        console.log(columns)
+
+        // removing the previous table values
+        remove_children_nodes("df_before_processing_table")
+
+        let mytable = document.getElementById('df_before_processing_table')
+        let thead = document.createElement('thead');
+        let tbody = document.createElement('tbody');
+        mytable.appendChild(thead)
+        mytable.appendChild(tbody)
+
+        var row_1 = document.createElement("tr")
+        for(let i = 0 ; i < columns.length ; i++){
+            let hdng = document.createElement("th")
+            hdng.innerHTML = columns[i]
+            row_1.appendChild(hdng)
+        }
+        // table headings
+        thead.appendChild(row_1)
+
+        for(let idx = 0 ; idx < res.length ; idx++){
+            let trow = document.createElement('tr')
+            for(var val in res[idx]){
+                let trow_data = document.createElement('td')
+                trow_data.innerHTML = (res[idx][val] === null) ? "null" : res[idx][val]
+                trow.appendChild(trow_data)
+            }
+            tbody.appendChild(trow)            
+        }    
+    }
+    function render_feature_selection(){
+
+        // Using Form is causing strange behaviour 
+        var prev_ele = document.getElementById("filtering-selector")
+        // var prev_ele = document.getElementById("filtering_form")
+        if(prev_ele) prev_ele.remove()
+        var prev_btn = document.getElementById("filtering_btn")
+        if(prev_btn) prev_btn.remove()
+        
+        console.log("feature selection")
+        var _div = document.getElementById("feature_selector")
+        _div.style.display = "block"
+
+
+        // @Creating a form
+        // var method_k_form = document.createElement("form")
+        // method_k_form.setAttribute("class" , "form-inline")
+        // method_k_form.setAttribute("id" , "filtering_form")
+
+        // creating a selecting option element
+        var prev_fil_sel = document.getElementById("filtering-selector")
+        if(prev_fil_sel) prev_fil_sel.remove()
+
+        var sel = document.createElement('select'); //select type of element
+        sel.setAttribute("class" , "filtering-selector")
+        sel.setAttribute("id" , "filtering-selector")
+        sel.setAttribute("style" , "width:200px")
+        sel.setAttribute("style" , "height:30px")
+        // sel.setAttribute("style" , "margin-right:50px")
+        // sel.setAttribute("placeholder" ,"Please select a file")
+        var opt = document.createElement("option")
+        opt.setAttribute("value","")
+        opt.setAttribute("disabled","disabled")
+        opt.setAttribute("selected","selected")
+        opt.innerHTML = "Select a filtering method"
+        sel.appendChild(opt)
+        _div.appendChild(sel)
+        // method_k_form.appendChild(sel)
+
+        // adding OPTIONS 
+        var filtering_methods = ["Chi-Square" , "Information gain" , "Fisher" , "Correlation Coefficient"]
+        
+        for(var i = 0 ; i < filtering_methods.length ; i++){
+            var opt = document.createElement("option")
+            opt.setAttribute("value" , filtering_methods[i])
+            // console.log(res[i]);
+            opt.innerHTML = filtering_methods[i]
+            sel.appendChild(opt)
+        }
+
+
+        // form for taking K input
+        var prev_kval_lab = document.getElementById("k_val_lab")
+        if(prev_kval_lab) prev_kval_lab.remove()
+
+        var lab = document.createElement("label")
+        lab.setAttribute("for" , "k_val")
+        lab.setAttribute("id" , "k_val_lab")
+        lab.setAttribute("style", "margin-left:50px")
+        // method_k_form.appendChild(lab)
+
+        // lab.setAttribute("style", "margin-right:10px")
+
+        lab.innerHTML = "K Val"
+        _div.appendChild(lab)
+
+        var prev_kinput = document.getElementById("k_val")
+        if(prev_kinput) prev_kinput.remove()
+
+        var k_input = document.createElement("input")
+        k_input.setAttribute("class" , "k_val")
+        k_input.setAttribute("id" , "k_val")
+        k_input.setAttribute("style" , 'width:70px; margin-left:10px')
+        k_input.setAttribute("type" , "number")
+        // kinput.appendChild(input_form)
+        k_input.setAttribute("min" , "0")
+        k_input.setAttribute("max" , res_columns.length - 1)
+        // method_k_form.appendChild(k_input)
+        _div.appendChild(k_input)
+
+        // adding button to perform filtering
+        var btn = document.createElement("button")
+        btn.setAttribute("onclick" , "perform_filtering()") 
+        btn.setAttribute("class" , "btn btn-success")
+        btn.setAttribute("id" , "filtering_btn")
+        btn.setAttribute("style" , "margin-left: 50px;")
+        btn.innerHTML = "Apply"
+        
+        // for selecting the target label
+        render_target_selection(_div)
+        // method_k_form.appendChild(btn)
+        // _div.appendChild(method_k_form)
+        _div.appendChild(btn);
+
+
+    }
+    function render_target_selection(_div){
+        var prev_lab = document.getElementById("target_val_lab")
+        if(prev_lab) prev_lab.remove()
+
+        var lab = document.createElement("label")
+        lab.setAttribute("for" , "")
+        lab.setAttribute("id" , "target_val_lab")
+        lab.setAttribute("style", "margin-left:50px; margin-right:10px")
+
+        lab.innerHTML = "Select Target"
+        _div.appendChild(lab)
+
+        var prev_target_selector = document.getElementById("target-selector")
+        if(prev_target_selector) prev_target_selector.remove()
+
+        var sel = document.createElement('select'); //select type of element
+        sel.setAttribute("class" , "target-selector")
+        sel.setAttribute("id" , "target-selector")
+        sel.setAttribute("style" , "width:200px; height:30px")
+        // sel.setAttribute("placeholder" ,"Please select a file")
+        var opt = document.createElement("option")
+        opt.setAttribute("value","")
+        opt.setAttribute("disabled","disabled")
+        opt.setAttribute("selected","selected")
+        opt.innerHTML = "Choose a target"
+        sel.appendChild(opt)
+        _div.appendChild(sel)
+        console.log(res.length)
+        for(var i = 0 ; i < res_columns.length ; i++){
+            var opt = document.createElement("option")
+            opt.setAttribute("value" ,res_columns[i])
+            console.log(res_columns[i]);
+            opt.innerHTML = res_columns[i]
+            sel.appendChild(opt)
+        }
+
+
+        // API to get valid target columns
+        var myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+        var raw = JSON.stringify({
+            // in API parameter the name should be same
+            "filepath": filepath
+        });
+
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+        fetch("/target_columns" , requestOptions)
+        .then(response=>response.text())
+        .then(result => {
+            result = JSON.parse(result)
+            console.log("Target COLumns")
+            console.log(result)
+        })
+
+    }
+    function set_file_path(){
+        filepath = document.getElementById("file-selector").value;
+        console.log("fpath " , filepath)
+        var myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+
+        var raw = JSON.stringify({
+            // in API parameter the name should be same
+            "filepath": filepath
+        });
+
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+        fetch('/selected_file_columns', requestOptions)
+            .then(response => response.text())
+            .then(result => {
+                console.log("my calls")
+                res = JSON.parse(result);
+                console.log(res);
+                res_columns = res['columns'];
+                console.log(res_columns)
+                step_selector();
+
+            })
+            .catch(error => console.log('error', error));
+    }
+    function perform_filtering(){
+        console.log("perform_filtering")
+        
+        var method_selected = document.getElementById("filtering-selector").value
+        var k_selected = document.getElementById("k_val").value
+        var target_selected = document.getElementById("target-selector").value
+        console.log(target_selected)
+        if(method_selected === null || k_selected === null){
+            console.log("Select valid values")
+            return null;
+        }
+        
+        console.log(method_selected)
+        console.log(k_selected)
+        console.log(filepath)
+        var myHeaders = new Headers();
+        myHeaders.append("Content-Type", "application/json");
+        var raw = JSON.stringify({
+            // in API parameter the name should be same
+            "method": method_selected,
+            "filepath": filepath,
+            "target": target_selected,
+            "kval":k_selected
+        });
+
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+        fetch("/feature_selection" , requestOptions)
+        .then(response=>response.text())
+        .then(result => {
+            result = JSON.parse(result)
+            // console.log(result)
+            console.log(res_columns)
+            if(method_selected == "Correlation Coefficient"){
+                mat_val = result["corr_mat"]
+                console.log(mat_val)
+                create_plot_corr_coeff(mat_val)
+            }
+            else{
+                x_val = result["labels"]
+                y_val = result["values"]
+                console.log(x_val)
+                console.log(y_val)
+                create_plot(x_val , y_val)
+            }
+            create_kbest_list(result["best-features"])
+        })
+    }
+    function create_plot_corr_coeff(mat){
+        updated_mat = mat
+        for(var i = 0 ; i < mat.length ; i++){
+            updated_mat[i] = mat[i].map(function(each_element){
+                return Number(each_element.toFixed(2));
+            });
+        }
+        console.log(updated_mat)
+        var data = [
+            {
+                z: mat,
+                x: res_columns,
+                y: res_columns,
+                type: 'heatmap',
+                hoverongaps: false
+            }
+        ];
+        var layout = { 
+                annotations: [],
+                width: 850,
+                height: 850
+        };
+        for(var i = 0 ; i < res_columns.length ; i++){
+            for(var j = 0 ; j  < res_columns.length ; j++){
+                if(updated_mat[i][j] < -0.2 || updated_mat[i][j] > 0.6){
+                    // for changing the annotations color, for better readability
+                    var textColor = 'white'
+                }
+                else{
+                    var textColor = "black"
+                }
+                var result = {
+                    xref: 'x1',
+                    yref: 'y1',
+                    x: res_columns[i],
+                    y: res_columns[j],
+                    text: updated_mat[i][j],
+                    showarrow: false,
+                    font: {
+                        color: textColor
+                    }
+                }
+                layout.annotations.push(result)
+            }
+        }
+        var plot_ele = document.getElementById("plot_container")
+        plot_ele.style.display = 'block'
+        Plotly.newPlot("plot_div" , data , layout , auto_open=false)
+    }
+    function create_plot(x_val , y_val){
+        var plotData = [
+                {
+                    x : x_val,
+                    y : y_val,
+                    type: 'bar' 
+                }
+            ];
+            var layout = {barmode: 'stack' , 
+                width: 600,
+                height: 600
+            };
+
+            var plot_ele = document.getElementById("plot_container")
+            plot_ele.style.display = 'block'
+            Plotly.newPlot("plot_div" , plotData , layout , auto_open=false)
+
+    }
+    function create_kbest_list(kbest_features){
+        var _div = document.getElementById("kbest_features_container")
+        _div.style.display = "block"
+        var prev_ol = document.getElementById("ol_kbest_features")
+        if(prev_ol) prev_ol.remove()
+
+        var ordered_list = document.createElement("OL")
+        ordered_list.setAttribute("class" , "list-group list-group-numbered")
+        ordered_list.setAttribute("id" , "ol_kbest_features")
+        ordered_list.setAttribute("style" , "list-style-position: inside;")
+        for(var i = 0 ; i < kbest_features.length ; i++){
+            var nlist = document.createElement("li")
+            nlist.setAttribute("class","list-group-item")
+            nlist.setAttribute("style" , "display:list-item;")
+            nlist.innerHTML = kbest_features[i]
+            ordered_list.appendChild(nlist)
+        }
+
+        _div.appendChild(ordered_list)
+
+    }
+</script>
