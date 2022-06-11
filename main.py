@@ -53,13 +53,14 @@ async def get_file_columns(filepath: str = Body(...,embed=True)):
     data = pd.read_csv(filepath)
     return {"columns" : data.columns.to_list()}
 @app.api_route("/target_columns" , methods=["POST"])
-async def get_target_columns(filepath:str = Body(...,embed=True)):
+def get_target_columns(filepath:str = Body(...,embed=True)):
     # Returns possible target columns list
     data = pd.read_csv(filepath)
     numerics = ['int16', 'int32', 'int64']
     data = data.select_dtypes(include=numerics)
     print(data.columns.to_list())
-    return data.columns.to_list()
+    return {"target-columns" : data.columns.to_list()}
+
 @app.api_route("/feature_selection" , methods = ["POST"])
 async def get_analysis(method : str = Body(...,embed=True) , filepath : str = Body(...,embed = True) ,target : str = Body(...,embed = True), kval : str=Body(...,embed = True)):
     kval = int(kval)
@@ -81,7 +82,6 @@ async def get_analysis(method : str = Body(...,embed=True) , filepath : str = Bo
 # Feature Selection Methods Implementation
 def __chi_square__(filepath , target , kval):
     from sklearn.feature_selection import chi2
-    from sklearn.feature_selection import SelectKBest, SelectPercentile
     
     data = pd.read_csv(filepath)
     X = data.drop(target , axis=1)
@@ -91,11 +91,7 @@ def __chi_square__(filepath , target , kval):
     #First array will return f scores and second array will return p scores
 
     p_values = pd.Series(f_score[1] , index=X.columns)
-    p_values.sort_values(ascending = True , inplace =True)
-
-    f_values = pd.Series(f_score[0] , index=X.columns)
-    f_values.sort_values(ascending = True , inplace =True)
-    #For ChiSquare Test the best features are ranked here first being the most relevant feature
+    p_values.sort_values(ascending = False , inplace =True)
 
     k_best_feature = p_values.head(kval).index.to_list()
     #This will select the k best features from the data set.
@@ -107,30 +103,24 @@ def __chi_square__(filepath , target , kval):
     return {"labels" : v1 , "values": v2 , "best-features" : k_best_feature}
 
 def __information_gain__(filepath , target , kval):
-    from sklearn.feature_selection import mutual_info_classif, SelectKBest
+    from sklearn.feature_selection import mutual_info_classif
 
     data = pd.read_csv(filepath)
     X = data.drop(target , axis=1)
     y = data[target]
     mutual_info = mutual_info_classif(X, y)
     mutual_info = pd.Series(mutual_info)
+    print("mutualkl")
+
     mutual_info.index = X.columns
-
     print(mutual_info)
+    mutual_info.sort_values(ascending=False,inplace=True)
 
-    sel_k_cols = SelectKBest(mutual_info_classif, k = kval)
-    
-    sel_k_cols.fit(X, y)
-    
-    ans = X.columns[sel_k_cols.get_support()]
-    print(ans)
-    print(type(ans))
-    ans = ans.sort_values()
-    print(ans)
-    v1 = mutual_info.index.to_list()
-    v2 = mutual_info.to_list()
-  
-    return {"labels" : v1 , "values": v2 , "best-features" : ans.to_list()}
+    v1 = mutual_info.index.tolist()
+    v2 = mutual_info.values.tolist()
+    ans = mutual_info.head(kval).index.tolist()
+
+    return {"labels" : v1 , "values": v2 , "best-features" : ans}
 
 def __correlation_coefficient__(filepath , target , kval):
     data = pd.read_csv(filepath)
@@ -159,7 +149,9 @@ def __fisher__(filepath , target , kval):
     nX = X[X.columns.to_list()].to_numpy()
     ny = y.to_numpy()
     
+    print("before")
     ranks = fisher_score.fisher_score(nX , ny)
+    print("after")
     print(data.columns[0 : len(data.columns) - 1])
     
     feat_imp = pd.Series(ranks , X.columns)
