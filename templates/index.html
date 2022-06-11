@@ -62,9 +62,11 @@
                 </div>
             </div>
         </div>
-        <div class="container  col-xs-6" style="margin-left: 100px">
+        <div class="container  col-xs-6" style="margin-left: 50px">
             <p id="df_before_processing" style="margin-top:20px; margin-bottom:20px;"></p>
-            <table class = "table table-striped" border = 1 id ="df_before_processing_table"></table>
+            <div id="table_container" style="overflow-x:auto;">
+                <table class = "table table-striped table-bordered table-sm" border = 1 id ="df_before_processing_table"></table>
+            </div>
             <div id = "feature_selector">
                 <h2>Select Feature Filtering Method</h2>
             </div>
@@ -232,6 +234,8 @@
         }
         console.log(columns)
 
+        var table_container = document.getElementById("table_container")
+    
         // removing the previous table values
         remove_children_nodes("df_before_processing_table")
 
@@ -240,6 +244,8 @@
         let tbody = document.createElement('tbody');
         mytable.appendChild(thead)
         mytable.appendChild(tbody)
+
+        table_container.appendChild(mytable)
 
         var row_1 = document.createElement("tr")
         for(let i = 0 ; i < columns.length ; i++){
@@ -386,8 +392,6 @@
         })
     }
     function render_target_selection(_div){
-        // console.log("hvirhevieriveirnvin")
-        // console.log("target " , target_candidates)
         var prev_lab = document.getElementById("target_val_lab")
         if(prev_lab) prev_lab.remove()
 
@@ -461,7 +465,7 @@
         var k_selected = document.getElementById("k_val").value
         var target_selected = document.getElementById("target-selector").value
         console.log(target_selected)
-        if(method_selected === null || k_selected === null){
+        if(method_selected === null || k_selected === null || target_selected === null){
             console.log("Select valid values")
             return null;
         }
