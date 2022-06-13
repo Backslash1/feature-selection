@@ -18,6 +18,23 @@
             border-color: red;
             /* display: none; */
         }
+        .sidenav {
+            height: 100%;
+            /* width: 400px; */
+            /* position: fixed; */
+            margin: auto;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            /* border-right: 0.6px solid #000000; */
+            overflow-x: hidden;
+            /* padding-top: 50px; */
+        }
+        #table_container {
+            /* position: fixed; */
+            /* position:absolute; left:10px;  */
+            /* margin: auto; */
+        }
     </style>
 </head>
 <body>
@@ -68,39 +85,39 @@
                 <table class = "table table-striped table-bordered table-sm" border = 1 id ="df_before_processing_table"></table>
             </div>
             <!-- style is done above for this div -->
-                <div id = "feature_selector">
-                    <div class="col-lg-12 col-sm-12 col-xl-12  text-center">
-                        <h2>Select Feature Filtering Method</h2>
-                    </div>
-                    <form class="form-horizontal">
-                        <div class="row form-group">
-                            <label for="sel1" class="form-label">SELECT FEATURE SELECTION METHOD</label>
-                            <select class="form-select form-control" id = "sel1" name="sellist1" style="margin-left: auto;margin-right: auto;">
-                              <option>To be alive</option>
-                              <option>What a wonderful life</option>
-                              <option>Towering Mountains</option>
-                              <option>Childhood</option>
-                            </select>
-                        </div>
-                        <div class="row form-group">
-                            <label for="sel2" class="form-label">SELECT TARGET</label>
-                            <select class="form-select form-control" id = "sel2" name="sellist2" style="margin-left: auto;margin-right: auto;">
-                              <option>Undying Lands</option>
-                              <option>Minas Tirith</option>
-                              <option>Rivendell</option>
-                              <option>Mordor</option>
-                            </select>
-                        </div>
-                        <div class="row form-group">
-                            <label for="sel3" class="form-label">SELECT TARGET</label>
-                            <input class="form-control" type="number" name="something_k" value="Kval" style="width: 200px;">
-                        </div>
-                        <div class="row form-group">
-                            <button class="btn btn-success btn-lg col-xs-12" id="something-btn" type="button" onclick="">Execute</button>
-                        </div>
-                    </form>
-
+            <div id = "feature_selector" style="display: none;">
+                <div class="col-lg-12 col-sm-12 col-xl-12  text-center">
+                    <h2>Select Feature Filtering Method</h2>
                 </div>
+                <form class="form-horizontal">
+                    <div class="row form-group">
+                        <label for="filtering-selector" class="form-label">SELECT FEATURE SELECTION METHOD</label>
+                        <select class="form-select form-control" id = "filtering-selector" name="sellist1" style="margin-left: auto;margin-right: auto;">
+                            <option>To be alive</option>
+                            <option>What a wonderful life</option>
+                            <option>Towering Mountains</option>
+                            <option>Childhood</option>
+                        </select>
+                    </div>
+                    <div class="row form-group">
+                        <label for="target-selector" class="form-label">SELECT TARGET</label>
+                        <select class="form-select form-control" id = "target-selector" name="sellist2" style="margin-left: auto;margin-right: auto;">
+                            <option>Undying Lands</option>
+                            <option>Minas Tirith</option>
+                            <option>Rivendell</option>
+                            <option>Mordor</option>
+                        </select>
+                    </div>
+                    <div class="row form-group">
+                        <label for="k_val" class="form-label">SELECT K VALUE</label>
+                        <input class="form-control" type="number" name="k_val" id="k_val" value="Kval" style="width: 200px;">
+                    </div>
+                    <div class="row form-group">
+                        <button class="btn btn-success btn-lg col-xs-12" id="filtering_btn" type="button" onclick="">Execute</button>
+                    </div>
+                </form>
+
+            </div>
 
             <div id = "plot_container" style="display: none; margin-top: 100px;">
                 <h2>PLOT</h2>
@@ -222,6 +239,12 @@
     }
     function step_selector(){
         // Fetches and displays the content of the input file
+        var plot_container_ele = document.getElementById("plot_container")
+        plot_container_ele.style.display = "none"
+
+        var kbest_features_container_ele = document.getElementById("kbest_features_container")
+        kbest_features_container_ele.style.display = "none"
+
         var myHeaders = new Headers();
         myHeaders.append("Content-Type", "application/json");
         var raw = JSON.stringify({
@@ -300,36 +323,11 @@
     }
     function render_feature_selection(){
 
-        // Using Form is causing strange behaviour 
-        var prev_ele = document.getElementById("filtering-selector")
-        // var prev_ele = document.getElementById("filtering_form")
-        if(prev_ele) prev_ele.remove()
-        var prev_btn = document.getElementById("filtering_btn")
-        if(prev_btn) prev_btn.remove()
-        
-        // console.log("feature selection")
         var _div = document.getElementById("feature_selector")
         _div.style.display = "block"
 
-
-        // creating a selecting option element
-        var prev_fil_sel = document.getElementById("filtering-selector")
-        if(prev_fil_sel) prev_fil_sel.remove()
-        var sel = document.createElement('select'); //select type of element
-        sel.setAttribute("class" , "filtering-selector")
-        sel.setAttribute("id" , "filtering-selector")
-        sel.setAttribute("style" , "width:200px")
-        sel.setAttribute("style" , "height:30px")
-        // sel.setAttribute("style" , "margin-right:50px")
-        // sel.setAttribute("placeholder" ,"Please select a file")
-        var opt = document.createElement("option")
-        opt.setAttribute("value","")
-        opt.setAttribute("disabled","disabled")
-        opt.setAttribute("selected","selected")
-        opt.innerHTML = "Select a filtering method"
-        sel.appendChild(opt)
-        _div.appendChild(sel)
-        // method_k_form.appendChild(sel)
+        var filtering_selector_ele = document.getElementById("filtering-selector")
+        filtering_selector_ele.innerHTML = ""
 
         // adding OPTIONS 
         var filtering_methods = ["Chi-Square" , "Information gain" , "Fisher" , "Correlation Coefficient"]
@@ -339,54 +337,19 @@
             opt.setAttribute("value" , filtering_methods[i])
             // console.log(res[i]);
             opt.innerHTML = filtering_methods[i]
-            sel.appendChild(opt)
+            filtering_selector_ele.appendChild(opt)
         }
 
 
-        // form for taking K input
-        var prev_kval_lab = document.getElementById("k_val_lab")
-        if(prev_kval_lab) prev_kval_lab.remove()
-
-        var lab = document.createElement("label")
-        lab.setAttribute("for" , "k_val")
-        lab.setAttribute("id" , "k_val_lab")
-        lab.setAttribute("style", "margin-left:50px")
-        // method_k_form.appendChild(lab)
-
-        // lab.setAttribute("style", "margin-right:10px")
-
-        lab.innerHTML = "K Val"
-        _div.appendChild(lab)
-
-        var prev_kinput = document.getElementById("k_val")
-        if(prev_kinput) prev_kinput.remove()
-
-        var k_input = document.createElement("input")
-        k_input.setAttribute("class" , "k_val")
-        k_input.setAttribute("id" , "k_val")
-        k_input.setAttribute("style" , 'width:70px; margin-left:10px')
-        k_input.setAttribute("type" , "number")
-        // kinput.appendChild(input_form)
-        k_input.setAttribute("min" , "0")
-        k_input.setAttribute("max" , res_columns.length - 1)
-        // method_k_form.appendChild(k_input)
-        _div.appendChild(k_input)
+        var k_val_ele = document.getElementById("k_val")
+        k_val_ele.setAttribute("min" , 1)
+        k_val_ele.setAttribute("max" , res_columns.length - 1)
 
         // adding button to perform filtering
-        var btn = document.createElement("button")
-        btn.setAttribute("onclick" , "perform_filtering()") 
-        btn.setAttribute("class" , "btn btn-success")
-        btn.setAttribute("id" , "filtering_btn")
-        btn.setAttribute("style" , "margin-left: 50px;")
-        btn.innerHTML = "Apply"
-        
-        // for selecting the target label
-        // fetch_target_columns(_div)
-        render_target_selection(_div)
-        // method_k_form.appendChild(btn)
-        // _div.appendChild(method_k_form)
-        _div.appendChild(btn);
+        var filtering_btn_ele = document.getElementById("filtering_btn")        
+        filtering_btn_ele.setAttribute("onclick" , "perform_filtering()")
 
+        render_target_selection()
 
     }
     function fetch_target_columns(_div){
@@ -418,41 +381,24 @@
         })
     }
     function render_target_selection(_div){
-        var prev_lab = document.getElementById("target_val_lab")
-        if(prev_lab) prev_lab.remove()
-
-        var lab = document.createElement("label")
-        lab.setAttribute("for" , "")
-        lab.setAttribute("id" , "target_val_lab")
-        lab.setAttribute("style", "margin-left:50px; margin-right:10px")
-
-        lab.innerHTML = "Select Target"
-        _div.appendChild(lab)
-
-        var prev_target_selector = document.getElementById("target-selector")
-        if(prev_target_selector) prev_target_selector.remove()
-
-        var sel = document.createElement('select'); //select type of element
-        sel.setAttribute("class" , "target-selector")
-        sel.setAttribute("id" , "target-selector")
-        sel.setAttribute("style" , "width:200px; height:30px")
-        // sel.setAttribute("placeholder" ,"Please select a file")
-        var opt = document.createElement("option")
-        opt.setAttribute("value","")
-        opt.setAttribute("disabled","disabled")
-        opt.setAttribute("selected","selected")
-        opt.innerHTML = "Choose a target"
-        sel.appendChild(opt)
-        _div.appendChild(sel)
-        // console.log(res.length)
+        var target_selection_ele = document.getElementById("target-selector")
+        target_selection_ele.innerHTML = "" // clearing previous target options
         for(var i = 0 ; i < target_candidates.length ; i++){
             var opt = document.createElement("option")
             opt.setAttribute("value" ,target_candidates[i])
             console.log(target_candidates[i]);
             opt.innerHTML = target_candidates[i]
-            sel.appendChild(opt)
+            target_selection_ele.appendChild(opt)
         }
-
+        if(target_selection_ele.innerHTML === ""){
+            // No target element
+            console.log("No target possible")
+            var opt = document.createElement("option")
+            opt.setAttribute("value" ,"NONE")
+            opt.setAttribute("disabled" , "disabled")
+            opt.innerHTML = "NONE"
+            target_selection_ele.appendChild(opt)
+        }
     }
     function set_file_path(){
         filepath = document.getElementById("file-selector").value;
@@ -490,15 +436,17 @@
         var method_selected = document.getElementById("filtering-selector").value
         var k_selected = document.getElementById("k_val").value
         var target_selected = document.getElementById("target-selector").value
-        console.log(target_selected)
-        if(method_selected === null || k_selected === null || target_selected === null){
+        
+        console.log(target_selected) 
+        console.log(method_selected)
+        console.log(k_selected)
+        console.log(filepath)
+
+        if(method_selected === "" || k_selected === "" || target_selected === ""){
             console.log("Select valid values")
             return null;
         }
         
-        console.log(method_selected)
-        console.log(k_selected)
-        console.log(filepath)
         var myHeaders = new Headers();
         myHeaders.append("Content-Type", "application/json");
         var raw = JSON.stringify({
