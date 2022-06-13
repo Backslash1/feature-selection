@@ -135,9 +135,24 @@ def __correlation_coefficient__(filepath , target , kval):
     kbest_features_col = cor_target.head(kval).index.to_list()
     kbest_features_val = cor_target.head(kval).values.tolist()
 
-    mat_val = corr_mat.values
+    # mat_val = corr_mat.values
+    
+    N = len(corr_mat.values)
+    print(N)
+    mat_val = []
     print(mat_val)
-    mat_val = mat_val.tolist()
+    for i in range(N - 1 , -1 , -1):
+        print(f"i:{i}" , end="")
+        mat_val.append([])
+        for j in range(N):
+            if i >= j:
+                # upper triangle
+                mat_val[N - i - 1].append(corr_mat.values[i][j])
+
+    # print(mat_val)
+    for i in range(N):
+        print(mat_val[i])
+    # mat_val = mat_val.tolist()
     return {"best-features":kbest_features_col ,"best-features-val":kbest_features_val ,"corr_mat" : mat_val}
 
 def __fisher__(filepath , target , kval):
