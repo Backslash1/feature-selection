@@ -2,7 +2,8 @@
 <html lang="en">
 
 <head>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn" crossorigin="anonymous">
     <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.8/js/select2.min.js" defer></script>
 
@@ -10,6 +11,7 @@
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
     <!-- <script src = "https://cdn.plot.ly/plotly-2.12.1.min.js'"></script> -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
 
     <style>
         #feature_selector {
@@ -30,107 +32,169 @@
             overflow-x: hidden;
             /* padding-top: 50px; */
         }
-        #table_container {
-            /* position: fixed; */
-            /* position:absolute; left:10px;  */
-            /* margin: auto; */
-        }
+        .loader {
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            }
+
     </style>
 </head>
 <body>
     <div style ="margin-top: 100px; ">
-        <div class="container col-xl-4 col-sm-12 col-md-3 col-lg-3">
-            <div class="sidenav">
-                <div class="container col-xs-12">
-                    <h4>Select or upload the file</h4>
-                    <!-- For choosing file uploading or selecting option -->
-                    <form>
-                        <div class="form-group" id="file_upload_select">
-                            <label class="radio-inline">
-                                <input type="radio" name="file" onclick="render_file_uploader()" value="upload" checked>
-                                Upload a file
-                            </label>
-                            <label class="radio-inline">
-                                <input type="radio" name="file" onclick="render_file_selector()" value="upload" >
-                                Choose an existing file
-                            </label>
-                        </div>
-                    </form>
-                    <!-- File Upload by default -->
-                    <div id="file_upload" style="display: block;">
-                        <h4>Upload a file</h4>
-                        <form class = "form-inline" style="display: inline;" enctype="multipart/form-data">
-                            <div class="form-group">
-                                <input type="file" name="file_name" id="file_name" accept=".csv" required>
-                            </div>
-                            <div class="form-group" style="">
-                                <button class="btn btn-success" id="upload-btn" type="button" value="upload"  onclick="read_csv_data()">
-                                Upload
-                                </button>
+
+        <div class="row">
+            <!-- trying grid layout by adding extra div for class row -->
+            <div class="col-xl-4 col-sm-12 col-md-4 col-lg-4">
+                <div class="sidenav">
+                    <div class="container">
+                        <h4>Select or upload the file</h4>
+                        <!-- For choosing file uploading or selecting option -->
+                        <form>
+                            <div class="form-group" id="file_upload_select">
+                                <label class="radio-inline">
+                                    <input type="radio" name="file" onclick="render_file_uploader()" value="upload" checked>
+                                    Upload a file
+                                </label>
+                                <label class="radio-inline">
+                                    <input type="radio" name="file" onclick="render_file_selector()" value="upload" >
+                                    Choose an existing file
+                                </label>
                             </div>
                         </form>
+                        <!-- File Upload by default -->
+                        <div id="file_upload" style="display: block;">
+                            <h4>Upload a file</h4>
+                            <form class = "form-inline" style="display: inline;" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <input type="file" name="file_name" id="file_name" accept=".csv" required>
+                                    <button class="btn btn-success" id="upload-btn" type="button" value="upload"  onclick="read_csv_data()">
+                                        Upload
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- File Selector(we will hide it by default) -->
+                        <div id="file_list" style="display: none;">
+                            <h4>Select a file</h4>
+                        </div>
+
                     </div>
-                    
-                    <!-- File Selector(we will hide it by default) -->
-                    <div id="file_list" style="display: none;">
-                        <h4>Select a file</h4>
+                </div>
+            </div>
+            <div class="col-xl-8 col-sm-12 col-md-8 col-lg-8 col-xs-12">
+                <!-- <p id="df_before_processing" style="margin-top:20px; margin-bottom:20px;"></p> -->
+                <div class="container">
+                    <div id="table_container" style="overflow-x:auto;">
+                        <table class = "table table-striped table-bordered table-sm" border = 1 id ="df_before_processing_table"></table>
+                    </div>
+                    <!-- style is done above for this div -->
+                    <div  id = "feature_selector" style="display: none;">
+                        <div class="col-lg-12 col-sm-12 col-xl-12  text-center">
+                            <h2>Select Feature Filtering Method</h2>
+                        </div>
+                        <form class="form-horizontal">
+                            <div class="row form-group">
+                                <label for="filtering-selector" class="form-label">SELECT FEATURE SELECTION METHOD</label>
+                                <select class="form-select form-control" id = "filtering-selector" name="sellist1" style="margin-left: auto;margin-right: auto;">
+                                    <!-- dummy values overidden later -->
+                                    <option>To be alive</option>
+                                    <option>What a wonderful life</option>
+                                    <option>Towering Mountains</option>
+                                    <option>Childhood</option>
+                                </select>
+                            </div>
+                            <div class="row form-group">
+                                <label for="target-selector" class="form-label">SELECT TARGET</label>
+                                <select class="form-select form-control" id = "target-selector" name="sellist2" style="margin-left: auto;margin-right: auto;">
+                                    <option></option>
+                                    <option></option>
+                                    <option></option>
+                                    <option></option>
+                                </select>
+                            </div>
+                            
+                            <div class="row form-group">
+                                <label for="k_val" class="form-label">SELECT K VALUE: &nbsp;</label>
+                                <input class="form-control" type="number" name="k_val" id="k_val" value="Kval" style="width: 200px;">
+                            </div>
+                            <div class="row form-group">
+                                <button class="btn btn-success btn-lg col-md-12 col-lg-12 col-xs-12" id="filtering_btn" type="button" onclick="">Execute</button>
+                            </div>
+
+                        </form>
+
+                    </div>
+                    <div id="feature-selection-descriptions" style="display: none;">
+                        <!-- For description of the feature selection methods -->
+                        <div id="accordion">
+                            <div class="card">
+                                <div class="card-header" id="headingOne" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne" style="box-shadow: none;">
+                                            Chi-Square Test Selection
+                                        </button>
+                                    </h5>
+                                </div>
+                        
+                                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Something Chi-Square related
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header" id="headingTwo" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo" style="box-shadow: none;">
+                                            Information Gain Selector
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Somethin INformation gain
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header" id="headingThree" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree" style="box-shadow: none;">
+                                            Correlation Coefficient Selection
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Something Corrrelation related
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
+                    <div id = "plot_container" style="display: none; margin-top: 100px;">
+                        <h2>PLOT</h2>
+                        <div class="spinner-border loader-element">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                        <div id = "plot_div">
+                        </div>
+                    </div>
+                    <div id = "kbest_features_container" style="display: none;">
+                        <h2>K Best Features</h2>
+                        <div class="spinner-border loader-element" >
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="container col-xl-8 col-sm-12 col-md-8 col-lg-8 col-xs-12">
-            <p id="df_before_processing" style="margin-top:20px; margin-bottom:20px;"></p>
-            <div id="table_container" style="overflow-x:auto;">
-                <table class = "table table-striped table-bordered table-sm" border = 1 id ="df_before_processing_table"></table>
-            </div>
-            <!-- style is done above for this div -->
-            <div id = "feature_selector" style="display: none;">
-                <div class="col-lg-12 col-sm-12 col-xl-12  text-center">
-                    <h2>Select Feature Filtering Method</h2>
-                </div>
-                <form class="form-horizontal">
-                    <div class="row form-group">
-                        <label for="filtering-selector" class="form-label">SELECT FEATURE SELECTION METHOD</label>
-                        <select class="form-select form-control" id = "filtering-selector" name="sellist1" style="margin-left: auto;margin-right: auto;">
-                            <!-- dummy values overidden later -->
-                            <option>To be alive</option>
-                            <option>What a wonderful life</option>
-                            <option>Towering Mountains</option>
-                            <option>Childhood</option>
-                        </select>
-                    </div>
-                    <div class="row form-group">
-                        <label for="target-selector" class="form-label">SELECT TARGET</label>
-                        <select class="form-select form-control" id = "target-selector" name="sellist2" style="margin-left: auto;margin-right: auto;">
-                            <option>Undying Lands</option>
-                            <option>Minas Tirith</option>
-                            <option>Rivendell</option>
-                            <option>Mordor</option>
-                        </select>
-                    </div>
-                    <div class="row form-group">
-                        <label for="k_val" class="form-label">SELECT K VALUE</label>
-                        <input class="form-control" type="number" name="k_val" id="k_val" value="Kval" style="width: 200px;">
-                    </div>
-                    <div class="row form-group">
-                        <button class="btn btn-success btn-lg col-xs-12" id="filtering_btn" type="button" onclick="">Execute</button>
-                    </div>
-                </form>
-
-            </div>
-
-            <div id = "plot_container" style="display: none; margin-top: 100px;">
-                <h2>PLOT</h2>
-                <div id = "plot_div">
-
-                </div>
-            </div>
-            <div id = "kbest_features_container" style="display: none;">
-                <h2>K Best Features</h2>
-            </div>
-        </div>
-
     </div>
 </body>
 
@@ -169,7 +233,7 @@
             method:"GET",
             redirect:"follow"
         }
-        fetch("/existingFiles" , requestOptions)
+        fetch("/existing_files" , requestOptions)
         .then(response => response.text())
         .then(result=>{
             res = JSON.parse(result)
@@ -219,7 +283,6 @@
         }
         file = input_files_list[0]
         var formData = new FormData()
-        var endPoint = "/store_file"
         formData.append('file', file, file.name)
 
         var requestOptions = {
@@ -227,7 +290,7 @@
           body: formData,
           redirect: 'follow',          
         };
-        fetch(endPoint , requestOptions)
+        fetch("/store_file" , requestOptions)
         .then(response=>response.text())
         .then(result=>{
             result = JSON.parse(result)
@@ -260,14 +323,9 @@
         fetch(`/df_before_processing`, requestOptions)
             .then(response => response.json())
             .then(result => {
-                // df_res_before_processing = JSON.parse(result.toString().replace(null, "null"));
-                // console.log(result)
                 df_res_before_processing = JSON.parse(result);
-                // console.log(df_res_before_processing)
-                //result.replace(/\bNaN\b/g, "null")
-                // console.log(df_res_before_processing)
+              
                 generate_table_output(df_res_before_processing)
-                // render_feature_selection()
                 fetch_target_columns() //inside this call render_feature_selection()
             })
             .catch(error => console.log('error', error));
@@ -283,7 +341,6 @@
     function generate_table_output(res){
         // creates a table from values present in "res" and displays it
 
-        // console.log("generateetient")
         const columns = []
         for(var col in res[0]){
             columns.push(col)
@@ -336,7 +393,6 @@
         for(var i = 0 ; i < filtering_methods.length ; i++){
             var opt = document.createElement("option")
             opt.setAttribute("value" , filtering_methods[i])
-            // console.log(res[i]);
             opt.innerHTML = filtering_methods[i]
             filtering_selector_ele.appendChild(opt)
         }
@@ -377,6 +433,10 @@
             target_candidates = result["target-columns"]
             console.log(target_candidates)
             render_feature_selection()
+            
+            // Loading description of methods available
+            let selection_desc_ele = document.getElementById("feature-selection-descriptions")
+            selection_desc_ele.style.display = "block"
             // render_target_selection(_div)
 
         })
@@ -431,9 +491,40 @@
             })
             .catch(error => console.log('error', error));
     }
+    function start_loader(){
+        let loader = document.getElementsByClassName("loader-element")
+        if(loader == null) return;
+        loader[0].style.display = "block"
+        loader[1].style.display = "block"
+    }
+    function stop_loader(){
+        let loader = document.getElementsByClassName("loader-element")
+        if(loader == null) return;
+        loader[0].style.display = "none"
+        loader[1].style.display = "none"
+    }
     function perform_filtering(){
         console.log("perform_filtering")
-        
+
+        // resetting the previous output after click
+        var prev_plot_ele = document.getElementById("plot_div")
+        prev_plot_ele.innerHTML = ""
+        // prev_plot_ele.style.display = "block"
+        // prev_plot_ele = "Loading..."
+        var prev_kbest_ele = document.getElementById("kbest_features_container")
+        prev_kbest_ele.style.display = "none"
+
+        // clear ol inside kbest_features_container
+        var prev_ol = document.getElementById("ol_kbest_features")
+        if(prev_ol) prev_ol.remove()
+
+        // start the loader
+        start_loader()
+        var plot_ele = document.getElementById("plot_container")
+        plot_ele.style.display = 'block'
+        var kbest_ele = document.getElementById("kbest_features_container")
+        kbest_ele.style.display = "block"
+
         var method_selected = document.getElementById("filtering-selector").value
         var k_selected = document.getElementById("k_val").value
         var target_selected = document.getElementById("target-selector").value
@@ -470,9 +561,11 @@
             result = JSON.parse(result)
             // console.log(result)
             console.log(res_columns)
+            // document.getElementsByClassName("loader").style.display = "none";
+
             if(method_selected == "Correlation Coefficient"){
                 mat_val = result["corr_mat"]
-                console.log(mat_val)
+                // console.log(mat_val)
                 create_plot_corr_coeff(mat_val)
             }
             else{
@@ -483,16 +576,20 @@
                 create_plot(x_val , y_val)
             }
             create_kbest_list(result["best-features"])
+
+            //stop the loader
+            stop_loader()
         })
     }
     function create_plot_corr_coeff(mat){
         updated_mat = mat
+        console.log("res col" , res_columns)
         for(var i = 0 ; i < mat.length ; i++){
             updated_mat[i] = mat[i].map(function(each_element){
                 return Number(each_element.toFixed(2));
             });
         }
-        console.log(updated_mat)
+        console.log("mat" , updated_mat)
         rev_res_columns = res_columns.slice().reverse() // reversing without mutating original
         var data = [
             {
@@ -509,12 +606,12 @@
                 height: 750,
                 yaxis:{
                     automargin: true
+                },
+                xaxis:{
+                    automargin: true
                 }
-                
         };
        
-        console.log(updated_mat)
-
         let M = updated_mat.length
 
         for(var i = 0 ; i < M ; i++){
@@ -556,7 +653,13 @@
             ];
             var layout = {barmode: 'stack' , 
                 width: 600,
-                height: 600
+                height: 600,
+                yaxis:{
+                    automargin: true
+                },
+                xaxis:{
+                    automargin: true
+                }
             };
 
             var plot_ele = document.getElementById("plot_container")

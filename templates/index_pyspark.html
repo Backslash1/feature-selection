@@ -12,6 +12,7 @@
     <!-- <script src = "https://cdn.plot.ly/plotly-2.12.1.min.js'"></script> -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
     <style>
         #feature_selector {
             padding: 10px;
@@ -133,6 +134,54 @@
                         </form>
 
                     </div>
+                    <div id="feature-selection-descriptions" style="display: none;">
+                        <!-- For description of the feature selection methods -->
+                        <div id="accordion">
+                            <div class="card">
+                                <div class="card-header" id="headingOne" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne" style="box-shadow: none;">
+                                            Chi-Square Test Selection
+                                        </button>
+                                    </h5>
+                                </div>
+                        
+                                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Something Chi-Square related
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header" id="headingTwo" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo" style="box-shadow: none;">
+                                            Variance Selector
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Somethin variance
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header" id="headingThree" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree" style="box-shadow: none;">
+                                            Correlatoin Coefficient Selection
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Something Corrrelation related
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div id = "plot_container" style="display: none; margin-top: 100px;">
                         <h2>PLOT</h2>
@@ -189,7 +238,7 @@
             method:"GET",
             redirect:"follow"
         }
-        fetch("/existingFiles" , requestOptions)
+        fetch("/existing_files" , requestOptions)
         .then(response => response.text())
         .then(result=>{
             res = JSON.parse(result)
@@ -397,6 +446,10 @@
             target_candidates = result["target-columns"]
             console.log(target_candidates)
             render_feature_selection()
+
+            // Loading description of methods available
+            let selection_desc_ele = document.getElementById("feature-selection-descriptions")
+            selection_desc_ele.style.display = "block"
             // render_target_selection(_div)
 
         })
