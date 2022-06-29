@@ -248,7 +248,7 @@
             method:"GET",
             redirect:"follow"
         }
-        fetch("/existing_files" , requestOptions)
+        fetch("/api/v1/ListOfFiles" , requestOptions)
         .then(response => response.text())
         .then(result=>{
             res = JSON.parse(result)
