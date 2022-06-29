@@ -33,6 +33,10 @@ def launch_pyspark(request: Request):
     start_pyspark_session()
     return templates.TemplateResponse("index_pyspark.html" , {"request" : request})
 
+@app.api_route('/featureSelection_python',methods=['GET'], response_class=HTMLResponse)
+async def monitor(request: Request):
+    return templates.TemplateResponse('feature_selection_python.html', {"request": request, "host": host, "port": port})
+
 @app.api_route("/store_file" , methods=['POST'])
 async def upload_file(file: UploadFile = File(...)):
     # Saves file in the predefined directory
