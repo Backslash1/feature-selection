@@ -41,10 +41,6 @@
             animation: spin 2s linear infinite;
             }
 
-        @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
@@ -148,7 +144,7 @@
                         
                                 <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
                                     <div class="card-body">
-                                        Something Chi-Square related
+                                        Executes the Chi-Squared test of Independence between Categorical variables. And based on chi-squared statistics selects the best features.
                                     </div>
                                 </div>
                             </div>
@@ -162,7 +158,7 @@
                                 </div>
                                 <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
                                     <div class="card-body">
-                                        Somethin variance
+                                        Selects feature based on variance. Higher variance features are preferred.
                                     </div>
                                 </div>
                             </div>
@@ -170,13 +166,27 @@
                                 <div class="card-header" id="headingThree" style="padding: 0 !important;">
                                     <h5 class="mb-0">
                                         <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree" style="box-shadow: none;">
-                                            Correlatoin Coefficient Selection
+                                            Correlation Coefficient Selection
                                         </button>
                                     </h5>
                                 </div>
                                 <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
                                     <div class="card-body">
-                                        Something Corrrelation related
+                                        Computes pairwise Pearson correlation coefficient of columns in the file. And based on target feature selects the highest correlating features.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header" id="headingFour" style="padding: 0 !important;">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseThree" style="box-shadow: none;">
+                                            One Way Anova
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#accordion">
+                                    <div class="card-body">
+                                        Computes the one-way ANOVA using the given categorical and continuous variables.
                                     </div>
                                 </div>
                             </div>
@@ -326,7 +336,7 @@
             body: raw,
             redirect: 'follow'
         };
-        fetch(`/data_values_pyspark`, requestOptions)
+        fetch("/data_values_pyspark", requestOptions)
             .then(response => response.json())
             .then(result => {
                 // df_res_before_processing = JSON.parse(result.toString().replace(null, "null"));

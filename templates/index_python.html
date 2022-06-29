@@ -143,7 +143,7 @@
                         
                                 <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
                                     <div class="card-body">
-                                        Something Chi-Square related
+                                        Executes the Chi-Squared test of Independence between Categorical variables. And based on chi-squared statistics selects the best features.
                                     </div>
                                 </div>
                             </div>
@@ -151,13 +151,13 @@
                                 <div class="card-header" id="headingTwo" style="padding: 0 !important;">
                                     <h5 class="mb-0">
                                         <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo" style="box-shadow: none;">
-                                            Information Gain Selector
+                                            Information Gain Selection
                                         </button>
                                     </h5>
                                 </div>
                                 <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
                                     <div class="card-body">
-                                        Somethin INformation gain
+                                        Computes the mutual information gain with the target.
                                     </div>
                                 </div>
                             </div>
@@ -171,7 +171,21 @@
                                 </div>
                                 <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
                                     <div class="card-body">
-                                        Something Corrrelation related
+                                        Computes pairwise Pearson correlation coefficient of columns in the file. And based on target feature selects the highest correlating features.
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="card-header" id="headingFour" style="padding: 0 !important;">
+                                        <h5 class="mb-0">
+                                            <button class="btn btn-info btn-block collapsed" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseThree" style="box-shadow: none;">
+                                                Fisher Score Selection
+                                            </button>
+                                        </h5>
+                                    </div>
+                                    <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#accordion">
+                                        <div class="card-body">
+                                            Computes the fisher scores and selects based on higher fisher score.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
