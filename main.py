@@ -1,5 +1,6 @@
 from dataclasses import field
 from glob import glob
+from unicodedata import category
 from urllib import request
 from fastapi import Body, FastAPI, Query, Request, UploadFile, File, HTTPException
 from fastapi.templating import Jinja2Templates
@@ -44,9 +45,16 @@ async def upload_file(file: UploadFile = File(...)):
     file_url = await _save_file_to_disk(file , path = dir , save_as = fname)
 
     columns_list = await file_columns(file_url)
-    return {"file_url" : file_url , "columns":columns_list}
-
-
+    val = await valid_file_columns(file_url)
+    
+    out = dict()
+    out["file_url"] = file_url
+    out["columns"] = columns_list
+    out["numeric_columns"] = val["numeric_columns"]
+    out["categorical_columns"] = val["categorical_columns"]
+    
+    return out
+    
 def start_pyspark_session():
     global spark
     import sys
@@ -74,6 +82,7 @@ async def load_df_and_return_vals_pyspark(filepath: str = Body(...,embed=True)):
     # print(df.to_json(orient="records"))
     return {df_for_display.to_json(orient="records")}
 
+
 async def file_columns(file_url):
     import csv
     columns_list = list()
@@ -97,16 +106,35 @@ async def get_list_of_files():
 
     return files_list
 
+async def valid_file_columns(filepath):
+    # returns all the valid file columns for feature selection
+    # Includes string-categorical columns and numeric columns
+    data = pd.read_csv(filepath)
+    numeric_cols = data.select_dtypes(include= np.number).columns.tolist()
+    categorical_cols = list()
+    cat_candidate_Cols = data.select_dtypes(include="object").columns
+    for col in cat_candidate_Cols:
+        if await is_categorical(data , col):
+            categorical_cols.append(col)
+
+    return {"numeric_columns" : numeric_cols , "categorical_columns" : categorical_cols}
+    
 @app.api_route("/selected_file_columns" , methods=["POST"])
 async def get_file_columns(filepath: str = Body(...,embed=True)):
     columns_list = await file_columns(filepath)
 
-    return {"columns" : columns_list}
-
-async def map_categorical_to_numeric(data):
-    for col in data.columns:
-        data[col] = data[col].astype('category').cat.codes
-    return data
+    val = await valid_file_columns(filepath)
+    
+    out = dict()
+    out["columns"] = columns_list
+    out["numeric_columns"] = val["numeric_columns"]
+    out["categorical_columns"] = val["categorical_columns"]
+    
+    return out
+    
+async def map_categorical_to_numeric(data , col):
+    data[col] = data[col].astype('category').cat.codes
+    return data[col]
 
 async def is_categorical(data , col):
     # If unique values are less than 15% then consider that column as categorical
@@ -121,16 +149,16 @@ async def is_categorical(data , col):
         return True
     return False
         
-@app.api_route("/string_categorical_columns" , methods=["POST" , "GET"])
-async def get_string_categorical_cols(filepath:str = Body(...,embed=True)):
-    data = pd.read_csv(filepath)
-    data = data.select_dtypes(include="object")
-    categorical_data = list()
-    for col in data.columns:
-        if await is_categorical(data , col):
-            categorical_data.append(col)
+# @app.api_route("/string_categorical_columns" , methods=["POST" , "GET"])
+# async def get_string_categorical_cols(filepath:str = Body(...,embed=True)):
+#     data = pd.read_csv(filepath)
+#     data = data.select_dtypes(include="object")
+#     categorical_data = list()
+#     for col in data.columns:
+#         if await is_categorical(data , col):
+#             categorical_data.append(col)
     
-    return {"columns" : categorical_data}
+#     return {"columns" : categorical_data}
 
 @app.api_route("/target_columns" , methods=["POST"])
 async def get_target_columns(categorical_col:List[str],filepath:str = Body(...,embed=True)):
@@ -139,25 +167,24 @@ async def get_target_columns(categorical_col:List[str],filepath:str = Body(...,e
     data = pd.read_csv(filepath)
     numerics = ['int16', 'int32', 'int64']
     target_columns = data.select_dtypes(include=numerics).columns.tolist()
-
-    print(categorical_col)
     for val in categorical_col:
         target_columns.append(val)
         
+
     return {"target-columns" :target_columns}
 
 @app.api_route("/feature_selection" , methods = ["POST"])
-async def get_analysis(method : str = Body(...,embed=True) , filepath : str = Body(...,embed = True) ,target : str = Body(...,embed = True), kval : str=Body(...,embed = True)):
+async def get_analysis(columns: List[str],categorical_columns:List[str],method : str = Body(...,embed=True) , filepath : str = Body(...,embed = True) ,target : str = Body(...,embed = True), kval : str=Body(...,embed = True)):
     kval = int(kval)
 
     if method.lower() == "chi-square":
-        return await __chi_square__(filepath , target , kval)
+        return await __chi_square__(filepath , columns , categorical_columns, target , kval)
     elif method.lower() == "information gain":
-        return await __information_gain__(filepath , target , kval)
+        return await __information_gain__(filepath ,columns , categorical_columns, target , kval)
     elif method.lower() == "fisher":
-        return await __fisher__(filepath , target , kval)
+        return await __fisher__(filepath ,columns , categorical_columns,target , kval)
     elif method.lower() == "correlation coefficient":
-        return await __correlation_coefficient__(filepath , target , kval)
+        return await __correlation_coefficient__(filepath ,columns , categorical_columns,target , kval)
     else:
         raise HTTPException(
             status_code = 404,
@@ -183,18 +210,19 @@ async def get_analysis(method : str = Body(...,embed=True) , filepath : str = Bo
         )
 
 # Feature Selection Methods Implementation in Python
-async def __chi_square__(filepath , target , kval):
+async def __chi_square__(filepath , columns , categorical_columns , target , kval):
     from scipy.stats import chi2_contingency
 
     data = pd.read_csv(filepath)
+    data = data[columns]
+    print(categorical_columns)
+    # transforming categorical data
+    for col in categorical_columns:
+        data[col] = await map_categorical_to_numeric(data , col)
+
+    print(data.head())
     X = data.drop(target , axis=1)
     y = data[target]
-    # y = y[target].astype('category').cat.codes 
-    # print(y)
-    # print(X.head())
-    
-    # contingency_table = pd.crosstab(X["Name"] , y)
-    # print(contingency_table)
 
     feature_cols = X.columns
     p_value_list = list()
@@ -215,13 +243,17 @@ async def __chi_square__(filepath , target , kval):
 
     return {"labels" : v1 , "values": v2 , "best-features" : k_best_feature}
 
-async def __information_gain__(filepath , target , kval):
+async def __information_gain__(filepath , columns , categorical_columns, target , kval):
     from sklearn.feature_selection import mutual_info_classif
 
     data = pd.read_csv(filepath)
+    data = data[columns]
+    # transforming categorical data
+    for col in categorical_columns:
+        data[col] = await map_categorical_to_numeric(data , col)
+
     X = data.drop(target , axis=1)
-    y = data[[target]]
-    y = y[target].astype('category').cat.codes 
+    y = data[target]
 
     mutual_info = mutual_info_classif(X, y)
     mutual_info = pd.Series(mutual_info)
@@ -235,9 +267,13 @@ async def __information_gain__(filepath , target , kval):
 
     return {"labels" : v1 , "values": v2 , "best-features" : ans}
 
-async def __correlation_coefficient__(filepath , target , kval):
+async def __correlation_coefficient__(filepath , columns , categorical_columns , target , kval):
     data = pd.read_csv(filepath)
-
+    data = data[columns]
+    # transforming categorical data
+    for col in categorical_columns:
+        data[col] = await map_categorical_to_numeric(data , col)
+        
     corr_mat = data.corr()
     cor_target = abs(corr_mat[target])
     cor_target = cor_target.sort_values(ascending=False)
@@ -257,10 +293,15 @@ async def __correlation_coefficient__(filepath , target , kval):
 
     return {"best-features":kbest_features_col ,"best-features-val":kbest_features_val ,"corr_mat" : mat_val}
 
-async def __fisher__(filepath , target , kval):
+async def __fisher__(filepath , columns , categorical_columns, target , kval):
     from skfeature.function.similarity_based import fisher_score
     
     data = pd.read_csv(filepath)
+    data = data[columns]
+    # transforming categorical data
+    for col in categorical_columns:
+        data[col] = await map_categorical_to_numeric(data , col)
+
     X = data.drop(target , axis=1)
     y = data[target]
     nX = X[X.columns.to_list()].to_numpy()
