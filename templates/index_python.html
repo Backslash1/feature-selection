@@ -217,6 +217,10 @@
     var filepath = "";
     var res_columns = "";
     var target_candidates = "";
+    var categorical_columns = "";
+    var numeric_columns = "";
+    var valid_columns = "";
+    
     const renderSelection= ()=>{
         $(".file-selector").select2({
             placeholder: "Select a file",
@@ -308,8 +312,13 @@
         .then(response=>response.text())
         .then(result=>{
             result = JSON.parse(result)
+            console.log(result)
             filepath = result['file_url']
             res_columns = result['columns']
+            numeric_columns = result['numeric_columns']
+            categorical_columns = result['categorical_columns']
+            valid_columns = numeric_columns.concat(categorical_columns) // returns a copy
+            // get_string_categorical_columns()
             step_selector()
         })
         .catch(error=>console.log('error' , error));
@@ -430,8 +439,10 @@
         myHeaders.append("Content-Type", "application/json");
         var raw = JSON.stringify({
             // in API parameter the name should be same
-            "filepath": filepath
+            "filepath": filepath,
+            "categorical_col" : categorical_columns
         });
+        console.log(raw);
 
         var requestOptions = {
             method: 'POST',
@@ -499,9 +510,12 @@
                 res = JSON.parse(result);
                 console.log(res);
                 res_columns = res['columns'];
-                console.log(res_columns)
+                numeric_columns = res['numeric_columns']
+                categorical_columns = res['categorical_columns']
+                valid_columns = numeric_columns.concat(categorical_columns) // returns a copy
+                console.log(res)
+                // get_string_categorical_columns();
                 step_selector();
-
             })
             .catch(error => console.log('error', error));
     }
@@ -560,7 +574,9 @@
             "method": method_selected,
             "filepath": filepath,
             "target": target_selected,
-            "kval":k_selected
+            "kval":k_selected,
+            "columns":valid_columns,
+            "categorical_columns":categorical_columns
         });
 
         var requestOptions = {
@@ -594,22 +610,26 @@
             //stop the loader
             stop_loader()
         })
+        .catch(
+            error=>console.log(error),
+            stop_loader()
+        );
     }
     function create_plot_corr_coeff(mat){
         updated_mat = mat
-        console.log("res col" , res_columns)
         for(var i = 0 ; i < mat.length ; i++){
             updated_mat[i] = mat[i].map(function(each_element){
                 return Number(each_element.toFixed(2));
             });
         }
         console.log("mat" , updated_mat)
-        rev_res_columns = res_columns.slice().reverse() // reversing without mutating original
+        // rev_res_columns = res_columns.slice().reverse() // reversing without mutating original
+        rev_valid_columns = valid_columns.slice().reverse()
         var data = [
             {
                 z: mat,
-                x: res_columns, // x axis labels
-                y: rev_res_columns, // y axis labels
+                x: valid_columns, // x axis labels
+                y: rev_valid_columns, // y axis labels
                 type: 'heatmap',
                 hoverongaps: false
             }
@@ -641,8 +661,8 @@
                 var result = {
                     xref: 'x1',
                     yref: 'y1',
-                    x: res_columns[j],
-                    y: rev_res_columns[i],
+                    x: valid_columns[j],
+                    y: rev_valid_columns[i],
                     text: updated_mat[i][j],
                     showarrow: false,
                     font: {
@@ -652,7 +672,7 @@
                 layout.annotations.push(result)
             }
         }
-        console.log("layout" , layout.annotations)
+        // console.log("layout" , layout.annotations)
         var plot_ele = document.getElementById("plot_container")
         plot_ele.style.display = 'block'
         Plotly.newPlot("plot_div" , data , layout , auto_open=false)
