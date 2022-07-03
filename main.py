@@ -1,8 +1,7 @@
 from dataclasses import field
 from glob import glob
-import py_compile
 from urllib import request
-from fastapi import Body, FastAPI, Request, UploadFile, File, HTTPException
+from fastapi import Body, FastAPI, Query, Request, UploadFile, File, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
 import os
@@ -10,6 +9,7 @@ import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import List
 
 app = FastAPI()
 
@@ -103,14 +103,48 @@ async def get_file_columns(filepath: str = Body(...,embed=True)):
 
     return {"columns" : columns_list}
 
+async def map_categorical_to_numeric(data):
+    for col in data.columns:
+        data[col] = data[col].astype('category').cat.codes
+    return data
+
+async def is_categorical(data , col):
+    # If unique values are less than 15% then consider that column as categorical
+    THRESHOLD_VALUE = 15/100 
+    if data[col].dtype not in ["object" , "string"]:
+        return False
+    uniq = data[col].nunique()
+    tvalues = data.shape[0]
+    threshold_count = THRESHOLD_VALUE * tvalues
+
+    if uniq < threshold_count:
+        return True
+    return False
+        
+@app.api_route("/string_categorical_columns" , methods=["POST" , "GET"])
+async def get_string_categorical_cols(filepath:str = Body(...,embed=True)):
+    data = pd.read_csv(filepath)
+    data = data.select_dtypes(include="object")
+    categorical_data = list()
+    for col in data.columns:
+        if await is_categorical(data , col):
+            categorical_data.append(col)
+    
+    return {"columns" : categorical_data}
+
 @app.api_route("/target_columns" , methods=["POST"])
-async def get_target_columns(filepath:str = Body(...,embed=True)):
+async def get_target_columns(categorical_col:List[str],filepath:str = Body(...,embed=True)):
     # Returns possible target columns list
+    # Utilises the already computed string-categorical columns
     data = pd.read_csv(filepath)
     numerics = ['int16', 'int32', 'int64']
-    data = data.select_dtypes(include=numerics)
-    print(data.columns.to_list())
-    return {"target-columns" : data.columns.to_list()}
+    target_columns = data.select_dtypes(include=numerics).columns.tolist()
+
+    print(categorical_col)
+    for val in categorical_col:
+        target_columns.append(val)
+        
+    return {"target-columns" :target_columns}
 
 @app.api_route("/feature_selection" , methods = ["POST"])
 async def get_analysis(method : str = Body(...,embed=True) , filepath : str = Body(...,embed = True) ,target : str = Body(...,embed = True), kval : str=Body(...,embed = True)):
@@ -155,6 +189,12 @@ async def __chi_square__(filepath , target , kval):
     data = pd.read_csv(filepath)
     X = data.drop(target , axis=1)
     y = data[target]
+    # y = y[target].astype('category').cat.codes 
+    # print(y)
+    # print(X.head())
+    
+    # contingency_table = pd.crosstab(X["Name"] , y)
+    # print(contingency_table)
 
     feature_cols = X.columns
     p_value_list = list()
@@ -180,7 +220,9 @@ async def __information_gain__(filepath , target , kval):
 
     data = pd.read_csv(filepath)
     X = data.drop(target , axis=1)
-    y = data[target]
+    y = data[[target]]
+    y = y[target].astype('category').cat.codes 
+
     mutual_info = mutual_info_classif(X, y)
     mutual_info = pd.Series(mutual_info)
 
